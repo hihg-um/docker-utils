@@ -56,7 +56,7 @@ docker: docker_base $(TOOLS)
 $(TOOLS):
 	@echo "Building Docker container: $(ORG_NAME)/$@:$(DOCKER_TAG)"
 	@docker build \
-		-f Dockerfile.$(DOCKER_BASE) \
+		-f Dockerfile.$@ \
 		-t $(ORG_NAME)/$@:$(DOCKER_TAG) \
 		$(DOCKER_BUILD_ARGS) \
 		--build-arg BASE_IMAGE=$(ORG_NAME)/$(DOCKER_BASE):$(DOCKER_TAG) \
@@ -79,7 +79,7 @@ docker_clean:
 		if [ -z "`git fetch 2>&1; \
 			git diff @{upstream} 2>&1`" ]; then \
 				docker rmi -f $(ORG_NAME)/$$f:latest \
-					2>/dev/null; \
+			       		2>/dev/null; \
 		fi \
 	done
 	@docker rmi -f $(ORG_NAME)/$(DOCKER_BASE):$(DOCKER_TAG) 2>/dev/null
