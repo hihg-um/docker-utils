@@ -6,7 +6,7 @@ OS_VER ?= 24.04
 
 IMAGE_REPOSITORY ?=
 
-TOOLS := bash git
+TOOLS := aws bash git
 
 DOCKER_BUILD_ARGS ?=
 DOCKER_TAG ?= $(shell git describe --tags --broken --dirty --all --long | \

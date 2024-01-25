@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: GPL-3.0
+ARG BASE_IMAGE
+FROM $BASE_IMAGE
+
+LABEL org.opencontainers.image.description="AWS CLI and Session Manager"
+
+ARG RUN_CMD
+
+ARG URL="https://s3.amazonaws.com/session-manager-downloads/plugin/latest"
+ARG ARCH="ubuntu_64bit"
+ARG PLUGIN="session-manager-plugin.deb"
+WORKDIR /tmp
+
+RUN DEBIAN_FRONTEND=noninteractive apt -y install awscli && \
+	curl -sLO "${URL}/${ARCH}/${PLUGIN}" && dpkg -i ${PLUGIN} && \
+	rm ${PLUGIN} 
+
+ARG TEST="/test.sh"
+COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}
+
+ARG ENTRY="/entrypoint.sh"
+RUN echo "#!/bin/bash\n$RUN_CMD \$@" > ${ENTRY} && chmod ugo+rx ${ENTRY}
+ENTRYPOINT [ "/entrypoint.sh" ]
