@@ -9,9 +9,14 @@ LABEL org.opencontainers.image.base.digest=""
 LABEL org.opencontainers.image.base.name="$BASE"
 LABEL org.opencontainers.image.description="${RUN_CMD}"
 
-# analytics package target - we want a new layer here, since different
-# dependencies will have to be installed, sharing the common base above
-RUN DEBIAN_FRONTEND=noninteractive apt -y install git-all gpg
+ARG URL_BASE="https://s3.amazonaws.com/mountpoint-s3-release/latest"
+ARG ARCH="x86_64"
+ARG PKG="mount-s3.deb"
+
+WORKDIR /usr/src
+
+RUN curl -sLO "${URL_BASE}/${ARCH}/${PKG}" && apt -y install ./${PKG} && \
+	rm ${PKG}
 
 ARG TEST="/test.sh"
 COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}

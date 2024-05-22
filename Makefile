@@ -6,7 +6,7 @@ OS_VER ?= 24.04
 
 IMAGE_REPOSITORY ?=
 
-TOOLS := aws bash git
+TOOLS := aws bash git mount-s3
 
 DOCKER_BUILD_ARGS ?=
 DOCKER_TAG ?= $(shell git describe --tags --broken --dirty --all --long | \
@@ -59,7 +59,7 @@ $(TOOLS):
 		-f Dockerfile.$@ \
 		-t $(ORG_NAME)/$@:$(DOCKER_TAG) \
 		$(DOCKER_BUILD_ARGS) \
-		--build-arg BASE_IMAGE=$(ORG_NAME)/$(DOCKER_BASE):$(DOCKER_TAG) \
+		--build-arg BASE=$(ORG_NAME)/$(DOCKER_BASE):$(DOCKER_TAG) \
 		--build-arg RUN_CMD=$@ \
 		.
 
@@ -70,7 +70,7 @@ docker_base:
 	@echo "Building Docker base: $(ORG_NAME)/$(DOCKER_BASE):$(DOCKER_TAG)"
 	@docker build -t $(ORG_NAME)/$(DOCKER_BASE):$(DOCKER_TAG) \
 		$(DOCKER_BUILD_ARGS) \
-		--build-arg BASE_IMAGE=$(OS_BASE):$(OS_VER) \
+		--build-arg BASE=$(OS_BASE):$(OS_VER) \
 		.
 
 docker_clean:
