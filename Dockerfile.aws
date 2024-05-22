@@ -1,19 +1,40 @@
 # SPDX-License-Identifier: GPL-3.0
-ARG BASE_IMAGE
-FROM $BASE_IMAGE
+ARG BASE
+FROM $BASE
 
-LABEL org.opencontainers.image.description="AWS CLI and Session Manager"
-
+ARG BASE
 ARG RUN_CMD
 
-ARG URL="https://s3.amazonaws.com/session-manager-downloads/plugin/latest"
-ARG ARCH="ubuntu_64bit"
-ARG PLUGIN="session-manager-plugin.deb"
-WORKDIR /tmp
+LABEL org.opencontainers.image.base.digest=""
+LABEL org.opencontainers.image.base.name="$BASE"
+LABEL org.opencontainers.image.description="AWS CLI and Session Manager"
 
-RUN DEBIAN_FRONTEND=noninteractive apt -y install awscli && \
-	curl -sLO "${URL}/${ARCH}/${PLUGIN}" && dpkg -i ${PLUGIN} && \
-	rm ${PLUGIN} 
+ARG AWS_CLI_URL_BASE="https://awscli.amazonaws.com"
+ARG AWS_CLI_ARCH="x86_64"
+ARG AWS_CLI_SYS="linux"
+
+ARG AWS_CLI_PUB="aws-cli.pub"
+ARG AWS_CLI_ZIP="awscli-exe-${AWS_CLI_SYS}-${AWS_CLI_ARCH}.zip"
+ARG AWS_CLI_SIG="${AWS_CLI_ZIP}.sig"
+
+ARG AWS_SSM_URL="https://s3.amazonaws.com/session-manager-downloads/plugin/latest"
+ARG AWS_SSM_ARCH="ubuntu_64bit"
+ARG AWS_SSM_PLUGIN="session-manager-plugin.deb"
+
+WORKDIR /usr/src
+
+COPY --chmod=0400 src/${AWS_CLI_PUB} .
+
+RUN DEBIAN_FRONTEND=noninteractive apt -y install \
+	--no-install-recommends --no-install-suggests gnupg groff unzip && \
+	curl -sLO "${AWS_CLI_URL_BASE}/${AWS_CLI_ZIP}" && \
+	gpg --import ./${AWS_CLI_PUB} && \
+	curl -sLO "${AWS_CLI_URL_BASE}/${AWS_CLI_SIG}" && \
+	gpg --verify ${AWS_CLI_SIG} ${AWS_CLI_ZIP} 2>/dev/null && \
+	unzip ${AWS_CLI_ZIP} && ./aws/install && \
+	rm ${AWS_CLI_PUB} ${AWS_CLI_SIG} ${AWS_CLI_ZIP} && \
+	curl -sLO "${AWS_SSM_URL}/${AWS_SSM_ARCH}/${AWS_SSM_PLUGIN}" && \
+	dpkg -i ${AWS_SSM_PLUGIN} && rm ${AWS_SSM_PLUGIN}
 
 ARG TEST="/test.sh"
 COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}

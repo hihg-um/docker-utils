@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0
-ARG BASE_IMAGE
-FROM $BASE_IMAGE
+ARG BASE
+FROM $BASE
 
-LABEL org.opencontainers.image.description="Bash package"
-
+ARG BASE
 ARG RUN_CMD
+
+LABEL org.opencontainers.image.base.digest=""
+LABEL org.opencontainers.image.base.name="$BASE"
+LABEL org.opencontainers.image.description="${RUN_CMD}"
 
 # analytics package target - we want a new layer here, since different
 # dependencies will have to be installed, sharing the common base above
