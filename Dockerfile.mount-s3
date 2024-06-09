@@ -9,13 +9,25 @@ LABEL org.opencontainers.image.base.digest=""
 LABEL org.opencontainers.image.base.name="$BASE"
 LABEL org.opencontainers.image.description="${RUN_CMD}"
 
-ARG URL_BASE="https://s3.amazonaws.com/mountpoint-s3-release/latest"
-ARG ARCH="x86_64"
-ARG PKG="mount-s3.deb"
+RUN DEBIAN_FRONTEND=noninteractive apt -y install \
+    --no-install-recommends --no-install-suggests \
+	curl \
+    && \
+	apt -y clean && rm -rf /var/lib/apt/lists/* /tmp/*
+
+ARG MOUNT_URL_BASE="https://s3.amazonaws.com/mountpoint-s3-release"
+ARG MOUNT_REV="latest"
+ARG MOUNT_ARCH="x86_64"
+ARG MOUNT_PKG="mount-s3.deb"
+ARG MOUNT_ASC="${PKG}.asc"
+ARG MOUNT_KEYS="public_keys/KEYS"
 
 WORKDIR /usr/src
 
-RUN curl -sLO "${URL_BASE}/${ARCH}/${PKG}" && apt -y install ./${PKG} && \
+RUN curl -sLO "${MOUNT_URL_BASE}/${MOUNT_ARCH}/${MOUNT_REV}/${MOUNT_PKG}" && \
+	curl -sLO "${MOUNT_URL_BASE}/${ARCH}/${ASC}" && \
+	curl -sLO "${MOUNT_URL_BASE}/${MOUNT_KEYS}" && \
+	apt -y install ./${PKG} && \
 	rm ${PKG}
 
 ARG TEST="/test.sh"
