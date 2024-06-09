@@ -2,16 +2,20 @@
 ARG BASE
 FROM $BASE
 
+# build-args
 ARG BASE
 ARG RUN_CMD
+ARG BUILD_REPO
 
-LABEL org.opencontainers.image.base.digest=""
-LABEL org.opencontainers.image.base.name="$BASE"
-LABEL org.opencontainers.image.description="${RUN_CMD}"
+LABEL org.opencontainers.image.base.name="${BASE}"
+LABEL org.opencontainers.image.description="Utilities: ${RUN_CMD}"
+LABEL org.opencontainers.image.url="${BUILD_REPO}"
 
-# analytics package target - we want a new layer here, since different
-# dependencies will have to be installed, sharing the common base above
-RUN DEBIAN_FRONTEND=noninteractive apt -y install bash
+RUN DEBIAN_FRONTEND=noninteractive apt -y install \
+    --no-install-recommends --no-install-suggests \
+    bash \
+    && \
+	apt -y clean && rm -rf /var/lib/apt/lists/* /tmp/*
 
 ARG TEST="/test.sh"
 COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}

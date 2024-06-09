@@ -2,12 +2,14 @@
 ARG BASE
 FROM $BASE
 
+# build-args
 ARG BASE
 ARG RUN_CMD
+ARG BUILD_REPO
 
-LABEL org.opencontainers.image.base.digest=""
-LABEL org.opencontainers.image.base.name="$BASE"
+LABEL org.opencontainers.image.base.name="${BASE}"
 LABEL org.opencontainers.image.description="AWS CLI and Session Manager"
+LABEL org.opencontainers.image.url="${BUILD_REPO}"
 
 ARG AWS_CLI_URL_BASE="https://awscli.amazonaws.com"
 ARG AWS_CLI_ARCH="x86_64"
@@ -26,8 +28,15 @@ WORKDIR /usr/src
 COPY --chmod=0400 src/${AWS_CLI_PUB} .
 
 RUN DEBIAN_FRONTEND=noninteractive apt -y install \
-	--no-install-recommends --no-install-suggests groff unzip && \
-	curl -sLO "${AWS_CLI_URL_BASE}/${AWS_CLI_ZIP}" && \
+	--no-install-recommends --no-install-suggests \
+	curl \
+	gpg \
+	groff \
+	unzip \
+	&& \
+	apt -y clean && rm -rf /var/lib/apt/lists/* /tmp/*
+
+RUN	curl -sLO "${AWS_CLI_URL_BASE}/${AWS_CLI_ZIP}" && \
 	gpg --import ./${AWS_CLI_PUB} && \
 	curl -sLO "${AWS_CLI_URL_BASE}/${AWS_CLI_SIG}" && \
 	gpg --verify ${AWS_CLI_SIG} ${AWS_CLI_ZIP} 2>/dev/null && \
