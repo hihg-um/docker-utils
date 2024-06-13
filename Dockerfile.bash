@@ -7,11 +7,8 @@ ARG BASE
 ARG RUN_CMD
 ARG BUILD_REPO
 
-LABEL org.opencontainers.image.base.name="${BASE}"
-LABEL org.opencontainers.image.description="Utilities: ${RUN_CMD}"
-LABEL org.opencontainers.image.url="${BUILD_REPO}"
-
-RUN DEBIAN_FRONTEND=noninteractive apt -y install \
+RUN apt -y update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt -y install \
     --no-install-recommends --no-install-suggests \
     bash \
     && \
@@ -23,3 +20,7 @@ COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}
 ARG ENTRY="/entrypoint.sh"
 RUN echo "#!/bin/bash\n$RUN_CMD \$@" > ${ENTRY} && chmod ugo+rx ${ENTRY}
 ENTRYPOINT [ "/entrypoint.sh" ]
+
+LABEL org.opencontainers.image.base.name="${BASE}"
+LABEL org.opencontainers.image.description="Utilities: ${RUN_CMD}"
+LABEL org.opencontainers.image.url="${BUILD_REPO}"
