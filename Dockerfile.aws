@@ -1,5 +1,35 @@
 # SPDX-License-Identifier: GPL-3.0
 ARG BASE
+FROM $BASE as builder
+
+RUN apt -y update -qq && DEBIAN_FRONTEND=noninteractive apt -y install \
+		--no-install-recommends --no-install-suggests \
+	curl \
+	groff \
+	unzip \
+	&& \
+	apt -y clean && rm -rf /var/lib/apt/lists/* /tmp/*
+
+ARG CLI_URI="https://awscli.amazonaws.com"
+ARG CLI_ARCH="x86_64"
+ARG CLI_SYS="linux"
+
+ARG CLI_GPG="aws-cli.gpg"
+ARG CLI_ZIP="awscli-exe-${CLI_SYS}-${CLI_ARCH}.zip"
+ARG CLI_SIG="${CLI_ZIP}.sig"
+
+WORKDIR /usr/src
+
+COPY --chmod=0400 src/gpg/${CLI_GPG} .
+
+RUN	curl -sLO "${CLI_URI}/${CLI_ZIP}" && \
+	curl -sLO "${CLI_URI}/${CLI_SIG}" && \
+	gpg --import ${CLI_GPG} && \
+	gpg --verify ${CLI_SIG} ${CLI_ZIP} && \
+	ls -la && echo "ASC: $CLI_SIG" && cat $CLI_SIG && \
+	unzip ${CLI_ZIP} && ./aws/install && \
+	rm ${CLI_GPG} ${CLI_SIG} ${CLI_ZIP}
+
 FROM $BASE
 
 # build-args
@@ -7,43 +37,25 @@ ARG BASE
 ARG RUN_CMD
 ARG BUILD_REPO
 
-LABEL org.opencontainers.image.base.name="${BASE}"
-LABEL org.opencontainers.image.description="AWS CLI and Session Manager"
-LABEL org.opencontainers.image.url="${BUILD_REPO}"
-
-ARG AWS_CLI_URL_BASE="https://awscli.amazonaws.com"
-ARG AWS_CLI_ARCH="x86_64"
-ARG AWS_CLI_SYS="linux"
-
-ARG AWS_CLI_PUB="aws-cli.pub"
-ARG AWS_CLI_ZIP="awscli-exe-${AWS_CLI_SYS}-${AWS_CLI_ARCH}.zip"
-ARG AWS_CLI_SIG="${AWS_CLI_ZIP}.sig"
-
-ARG AWS_SSM_URL="https://s3.amazonaws.com/session-manager-downloads/plugin/latest"
-ARG AWS_SSM_ARCH="ubuntu_64bit"
-ARG AWS_SSM_PLUGIN="session-manager-plugin.deb"
-
-WORKDIR /usr/src
-
-COPY --chmod=0400 src/${AWS_CLI_PUB} .
-
-RUN DEBIAN_FRONTEND=noninteractive apt -y install \
-	--no-install-recommends --no-install-suggests \
+RUN apt -y update -qq && DEBIAN_FRONTEND=noninteractive apt -y install \
+		--no-install-recommends --no-install-suggests \
 	curl \
-	gpg \
 	groff \
-	unzip \
 	&& \
 	apt -y clean && rm -rf /var/lib/apt/lists/* /tmp/*
 
-RUN	curl -sLO "${AWS_CLI_URL_BASE}/${AWS_CLI_ZIP}" && \
-	gpg --import ./${AWS_CLI_PUB} && \
-	curl -sLO "${AWS_CLI_URL_BASE}/${AWS_CLI_SIG}" && \
-	gpg --verify ${AWS_CLI_SIG} ${AWS_CLI_ZIP} 2>/dev/null && \
-	unzip ${AWS_CLI_ZIP} && ./aws/install && \
-	rm ${AWS_CLI_PUB} ${AWS_CLI_SIG} ${AWS_CLI_ZIP} && \
-	curl -sLO "${AWS_SSM_URL}/${AWS_SSM_ARCH}/${AWS_SSM_PLUGIN}" && \
-	dpkg -i ${AWS_SSM_PLUGIN} && rm ${AWS_SSM_PLUGIN}
+WORKDIR /usr/src
+
+ARG S3_URI="https://s3.amazonaws.com"
+ARG SSM_ASC="amazon-ssm-agent.asc"
+ARG SSM_ARCH="ubuntu_64bit"
+ARG SSM_PLUGIN="session-manager-plugin.deb"
+ARG SSM_URI="${S3_URI}/session-manager-downloads/plugin/latest"
+
+COPY --from=builder /usr/local/ /usr/local/
+
+RUN curl -sLO "${SSM_URI}/${SSM_ARCH}/${SSM_PLUGIN}" && \
+	dpkg -i ${SSM_PLUGIN} && rm ${SSM_PLUGIN}
 
 ARG TEST="/test.sh"
 COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}
@@ -51,3 +63,7 @@ COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}
 ARG ENTRY="/entrypoint.sh"
 RUN echo "#!/bin/bash\n$RUN_CMD \$@" > ${ENTRY} && chmod ugo+rx ${ENTRY}
 ENTRYPOINT [ "/entrypoint.sh" ]
+
+LABEL org.opencontainers.image.base.name="${BASE}"
+LABEL org.opencontainers.image.description="AWS CLI and Session Manager"
+LABEL org.opencontainers.image.url="${BUILD_REPO}"
