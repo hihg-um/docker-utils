@@ -3,10 +3,10 @@ ARG BASE
 FROM $BASE as builder
 
 RUN apt -y update -qq && DEBIAN_FRONTEND=noninteractive apt -y install \
-		--no-install-recommends --no-install-suggests \
-	curl \
-	groff \
-	unzip \
+	--no-install-recommends --no-install-suggests \
+		curl \
+		groff \
+		unzip \
 	&& \
 	apt -y clean && rm -rf /var/lib/apt/lists/* /tmp/*
 
@@ -36,6 +36,7 @@ FROM $BASE
 ARG BASE
 ARG RUN_CMD
 ARG BUILD_REPO
+ARG BUILD_TIME
 
 RUN apt -y update -qq && DEBIAN_FRONTEND=noninteractive apt -y install \
 		--no-install-recommends --no-install-suggests \
@@ -57,13 +58,13 @@ COPY --from=builder /usr/local/ /usr/local/
 RUN curl -sLO "${SSM_URI}/${SSM_ARCH}/${SSM_PLUGIN}" && \
 	dpkg -i ${SSM_PLUGIN} && rm ${SSM_PLUGIN}
 
-ARG TEST="/test.sh"
-COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}
+COPY --chmod=0555 src/test/$RUN_CMD.sh /test.sh
 
-ARG ENTRY="/entrypoint.sh"
-RUN echo "#!/bin/bash\n$RUN_CMD \$@" > ${ENTRY} && chmod ugo+rx ${ENTRY}
-ENTRYPOINT [ "/entrypoint.sh" ]
+ENTRYPOINT [ "aws" ]
 
+LABEL org.opencontainers.image.base.digest=""
 LABEL org.opencontainers.image.base.name="${BASE}"
+LABEL org.opencontainers.image.created="${BUILD_TIME}"
 LABEL org.opencontainers.image.description="AWS CLI and Session Manager"
+LABEL org.opencontainers.image.title="${RUN_CMD}"
 LABEL org.opencontainers.image.url="${BUILD_REPO}"

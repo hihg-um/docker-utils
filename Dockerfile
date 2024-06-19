@@ -8,7 +8,6 @@ ARG GIT_REPO
 ARG GIT_TAG
 ARG GIT_REV
 ARG BUILD_REPO
-ARG BUILD_TIME
 
 # Install OS updates, security fixes and utils, generic app dependencies
 RUN apt -y update -qq && apt -y upgrade && \
