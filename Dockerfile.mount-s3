@@ -4,15 +4,23 @@ FROM $BASE
 
 ARG BASE
 ARG RUN_CMD
+ARG BUILD_REPO
+ARG BUILD_TIME
 
 RUN apt -y update -qq && \
 	DEBIAN_FRONTEND=noninteractive apt -y install \
-    --no-install-recommends --no-install-suggests \
-	curl \
-	libfuse2 \
-	fuse \
+	--no-install-recommends --no-install-suggests \
+		curl \
+		libfuse2 \
+		fuse \
 	&& \
 	apt -y clean && rm -rf /var/lib/apt/lists/* /tmp/*
+
+# URLs and names
+# https://s3.amazonaws.com/mountpoint-s3-release
+# deb: latest/x86_64/mount-s3.deb
+# gpg: public_keys/KEYS
+# sig: latest/x86_64/mount-s3.deb.asc
 
 ARG MNT_URI="https://s3.amazonaws.com/mountpoint-s3-release"
 ARG MNT_REV="latest"
@@ -20,31 +28,28 @@ ARG MNT_ARCH="x86_64"
 ARG MNT_PKG="mount-s3.deb"
 ARG MNT_SIG="${MNT_PKG}.asc"
 ARG MNT_ASC="673F E406 1506 BB46 9A0E  F857 BE39 7A52 B086 DA5A"
-ARG MNT_GPG="public_keys/KEYS"
+ARG MNT_GPG_PATH="public_keys"
+ARG MNT_GPG="KEYS"
 
 WORKDIR /usr/src
 
-# URLs
-# https://s3.amazonaws.com/
-# deb: mountpoint-s3-release/latest/x86_64/mount-s3.deb
-# gpg: mountpoint-s3-release/public_keys/KEYS
-# sig: mountpoint-s3-release/latest/x86_64/mount-s3.deb.asc
-
 RUN curl -sLO "${MNT_URI}/${MNT_REV}/${MNT_ARCH}/${MNT_PKG}" && \
-	curl -sLO "${MNT_URI}/${MNT_GPG}" && \
+	curl -sLO "${MNT_URI}/${MNT_GPG_PATH}/${MNT_GPG}" && \
 	curl -sLO "${MNT_URI}/${MNT_REV}/${MNT_ARCH}/${MNT_SIG}" && \
-	gpg --import KEYS && gpg --fingerprint mountpoint-s3@amazon.com
-RUN	gpg --verify ${MNT_SIG} ${MNT_PKG} && \
-	apt -y install ./${MNT_PKG} && rm ${MNT_PKG} && \
+	gpg --import ${MNT_GPG} && \
+	gpg --fingerprint mountpoint-s3@amazon.com && \
+	gpg --verify ${MNT_SIG} ${MNT_PKG} && \
+	apt -y install ./${MNT_PKG} && \
+	rm ${MNT_PKG} ${MNT_SIG} ${MNT_GPG} && \
 	apt -y clean && rm -rf /var/lib/apt/lists/* /tmp/*
 
-ARG TEST="/test.sh"
-COPY --chmod=0555 src/test/$RUN_CMD.sh ${TEST}
+COPY --chmod=0555 src/test/$RUN_CMD.sh /test.sh
 
-ARG ENTRY="/entrypoint.sh"
-RUN echo "#!/bin/bash\n$RUN_CMD \$@" > ${ENTRY} && chmod ugo+rx ${ENTRY}
-ENTRYPOINT [ "/entrypoint.sh" ]
+ENTRYPOINT [ "mount-s3" ]
 
 LABEL org.opencontainers.image.base.digest=""
 LABEL org.opencontainers.image.base.name="$BASE"
-LABEL org.opencontainers.image.description="${RUN_CMD}"
+LABEL org.opencontainers.image.created="$BUILD_TIME"
+LABEL org.opencontainers.image.description="AWS S3 Mount Utility Container"
+LABEL org.opencontainers.image.title="${RUN_CMD}"
+LABEL org.opencontainers.image.url="${BUILD_REPO}"
